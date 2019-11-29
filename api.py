@@ -3,7 +3,8 @@ from flask import request
 from flask_sqlalchemy import SQLAlchemy
 import urllib
 from marshmallow_sqlalchemy import ModelSchema
-import services.scraper as scraper
+
+import services.data_handling as nba_service
 
 app = flask.Flask(__name__)
 params = urllib.parse.quote_plus("DRIVER={ODBC Driver 17 for SQL Server};SERVER=nba-stats.database.windows.net;DATABASE=nba-stats;UID=peter-admin;PWD=NbaStats123")
@@ -16,6 +17,9 @@ class Player(db.Model):
     __tablename__ = 'players'
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
+
+    def __init__(self, name):
+        self.name = name
 
     def __repr__(self):
         return '<Player(id=%r)>' % self.id
@@ -33,6 +37,13 @@ class Match(db.Model):
     away_team_score = db.Column(db.Integer, primary_key=False)
     date = db.Column(db.DateTime, primary_key=False)
 
+    def __init__(self, home_team, away_team, home_team_score, away_team_score, date):
+        self.home_team = home_team
+        self.away_team = away_team
+        self.home_team_score = home_team_score
+        self.away_team_score = away_team_score
+        self.date = date
+        
     def __repr__(self):
         return '<Match(id=%r)>' % self.id
 
@@ -58,6 +69,21 @@ class PlayerMatch(db.Model):
     steals = db.Column(db.Integer, nullable=False)
     blocks = db.Column(db.Integer, nullable=False)
     turnovers = db.Column(db.Integer, nullable=False)
+
+    def __init__(self, player_id, match_id, field_goals_made, field_goals_attempted, free_throws_made, free_throws_attempted, three_pointers_made, points, rebounds, assists, steals, blocks, turnovers):
+        self.player_id = player_id
+        self.match_id = match_id
+        self.field_goals_made = field_goals_made
+        self.field_goals_attempted = field_goals_attempted
+        self.free_throws_made = free_throws_made
+        self.free_throws_attempted = free_throws_attempted
+        self.three_pointers_made = three_pointers_made
+        self.points = points
+        self.rebounds = rebounds
+        self.assists = assists
+        self.steals = steals
+        self.blocks = blocks
+        self.turnovers = turnovers
 
     def __repr__(self):
         return '<PlayerMatch(id=%r)>' % self.id
@@ -120,19 +146,13 @@ def handle_matches():
     if (request.method == 'POST'):
         month = request.args.get('month')
         year = request.args.get('year')
-        links = scraper.obtain_match_links(year, month)
-        players = scraper.obtain_players(links)
-        matches = scraper.obtain_matches(links)
+
+        nba_service.add_stats_to_database(db, Player, Match, PlayerMatch, year, month)
 
 
-
-
-        # Scrape the website here
-
-        # scraper.obtain_match_links()
         test = {
-            "month" : month,
-            "year" : year
+            "month": "october",
+            "year": "2020"
         }
 
         # scrape website and store in the database

@@ -68,5 +68,3 @@ def add_stats_to_database(db, Player, Match, PlayerMatch, year, month):
                         new_player_match = PlayerMatch(player_object.id, match_object.id, fgm, fga, ftm, fta, fg3, pts, rebs, asts, stls, blks, tos)
                         db.session.add(new_player_match)
                         db.session.commit()
-
-    return 0

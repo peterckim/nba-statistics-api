@@ -46,7 +46,7 @@ def handle_get_request():
 
 def handle_post_request():
     PARAMS = post_params()
-    URL = "http://127.0.0.1:5000/matches?month=%s&year=%s" % (PARAMS["month"], PARAMS["year"])
+    URL = "http://127.0.0.1:5000/api/matches?month=%s&year=%s" % (PARAMS["month"], PARAMS["year"])
 
     r = requests.post(URL)
     data = r.json()

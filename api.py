@@ -3,6 +3,7 @@ from flask import request
 from flask_sqlalchemy import SQLAlchemy
 import urllib
 from marshmallow_sqlalchemy import ModelSchema
+from marshmallow_sqlalchemy.fields import Nested
 
 import services.scraper as scraper
 import datetime
@@ -121,6 +122,7 @@ class PlayerSeason(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     player_id = db.Column(db.Integer, db.ForeignKey('players.id'))
     season_id = db.Column(db.Integer, db.ForeignKey('seasons.id'))
+    player = db.relationship(Player, backref='player_seasons')
 
     field_goals_made = db.Column(db.DECIMAL(asdecimal=False), nullable=False)
     field_goals_attempted = db.Column(db.DECIMAL(asdecimal=False), nullable=False)
@@ -133,6 +135,8 @@ class PlayerSeason(db.Model):
     steals_per_game = db.Column(db.DECIMAL(asdecimal=False), nullable=False)
     blocks_per_game = db.Column(db.DECIMAL(asdecimal=False), nullable=False)
     turnovers_per_game = db.Column(db.DECIMAL(asdecimal=False), nullable=False)
+
+
 
     def __init__(self, player_id, season_id, field_goals_made, field_goals_attempted, free_throws_made, free_throws_attempted, three_pointers_per_game, points_per_game, rebounds_per_game, assists_per_game, steals_per_game, blocks_per_game, turnovers_per_game):
         self.player_id = player_id
@@ -152,7 +156,16 @@ class PlayerSeason(db.Model):
     def __repr__(self):
         return '<PlayerSeason(id=%r)>' % self.id
 
+
+class SmartNested(Nested):
+    def serialize(self, attr, obj, accessor=None):
+        if attr not in obj.__dict__:
+            return {"id": int(getattr(obj, attr + "_id"))}
+        return super(SmartNested, self).serialize(attr, obj, accessor)
+
+
 class PlayerSeasonSchema(ModelSchema):
+    player = SmartNested(PlayerSchema)
     class Meta:
         model = PlayerSeason
 
@@ -304,6 +317,23 @@ def get_player_season(season_id, player_id):
     dump_data = player_season_schema.dump(player_season)
 
     return flask.jsonify(dump_data)
+
+
+@app.route('/api/seasons/<int:season_id>/players', methods=['GET'])
+def get_players_season(season_id):
+    player_seasons = PlayerSeason.query.join(Player).filter(PlayerSeason.season_id == season_id)
+    # player_seasons = PlayerSeason.query.filter(PlayerSeason.season_id == season_id)
+    player_season_schema = PlayerSeasonSchema()
+    player_seasons_list = []
+
+    for player_season in player_seasons:
+        print(player_season.player)
+        # print((player_season_schema.dump(player_season)))
+        player_seasons_list.append(player_season_schema.dump(player_season))
+
+
+
+    return flask.jsonify(player_seasons_list)
 
 
 app.run()
